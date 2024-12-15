@@ -124,6 +124,43 @@ class CRM_Chmosaicotemplate_Upgrader extends CRM_Chmosaicotemplate_Upgrader_Base
     return TRUE;
   }
 
+  public function upgrade_1202() {
+    $this->ctx->log->info('Applying update 1202: Update to Joe\'s fixed version of the template');
+    $this->fixUpBasicThankYouTemplate();
+    return TRUE;
+  }
+
+  public function upgrade_1203() {
+    $this->ctx->log->info('CRM-988: Relocate "Unsubscribe" Link to the Footer');
+   //Replacing uk.co.vedaconsulting.mosaico template path with biz.jmaconsulting.chmosaicotemplate for canadahelps base(Basic) templates (4 templates)
+    $whereClauses = [
+      [
+        'searchString' => 'common/uk.co.vedaconsulting.mosaico/packages/mosaico/templates/versafix-1/template-versafix-1.html',
+        'searchClause' => "metadata LIKE '%common/uk.co.vedaconsulting.mosaico/packages/mosaico/templates/versafix-1/template-versafix-1.html%'",
+        'replaceString' => 'common/biz.jmaconsulting.chmosaicotemplate/chtemplate/chtemplate.html',
+      ],
+      [
+        'searchString' => 'vendor/civicrm/uk.co.vedaconsulting.mosaico/packages/mosaico/templates/versafix-1/template-versafix-1.html',
+        'searchClause' => "metadata LIKE '%vendor/civicrm/uk.co.vedaconsulting.mosaico/packages/mosaico/templates/versafix-1/template-versafix-1.html%'",
+        'replaceString' => 'vendor/civicrm/zz-canadahelps/biz.jmaconsulting.chmosaicotemplate/chtemplate/chtemplate.html',
+      ]
+    ];
+    foreach($whereClauses as $whereClause) {
+     
+     $queryValue = CRM_Core_DAO::executeQuery(sprintf("SELECT metadata, id from `civicrm_mosaico_template` WHERE %s ", $whereClause['searchClause']));
+     while($queryValue->fetch())
+     {
+       $metavalue_array = json_decode($queryValue->metadata,TRUE);
+       $metavalue_array['template'] = str_replace($whereClause['searchString'], $whereClause['replaceString'], $metavalue_array['template']);
+       $updated_metavalue = json_encode($metavalue_array);
+       CRM_Core_DAO::executeQuery(sprintf("UPDATE civicrm_mosaico_template SET metadata = '%s' WHERE id = %s ", $updated_metavalue, $queryValue->id));
+      
+    }
+    
+  }
+   return TRUE;
+}
+
   public function fixUpBasicThankYouTemplate() {
     $thankYouTemplate = civicrm_api3('MessageTemplate', 'get', [
       'msg_title' => 'Basic - Thank You Email',
